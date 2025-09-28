@@ -100,7 +100,7 @@ function App() {
                       }
                       className="mx-2"
                     >
-                      Call a Friend
+                      Calling 
                     </MDBBtn>
                   </div>
 

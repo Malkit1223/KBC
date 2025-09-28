@@ -3,6 +3,7 @@ import useSound from "use-sound";
 import play from "../sounds/play.mp3";
 import correct from "../sounds/correct.mp3";
 import wrong from "../sounds/wrong.mp3";
+import croreAudio from "../sounds/crore.mp3"; // Audio for 7 crore win
 
 const Quiz = ({
   data,
@@ -18,16 +19,19 @@ const Quiz = ({
   const [visibleAnswers, setVisibleAnswers] = useState([]);
   const [audiencePoll, setAudiencePoll] = useState(null);
   const [showCall, setShowCall] = useState(false);
+  const [showCongrats, setShowCongrats] = useState(false); // <-- New state
 
   const [letsPlay] = useSound(play);
   const [correctAnswer] = useSound(correct);
   const [wrongAnswer] = useSound(wrong);
+  const [playCrore] = useSound(croreAudio);
 
   useEffect(() => {
     setQuestion(data[questionNumber - 1]);
     setVisibleAnswers(data[questionNumber - 1]?.answers || []);
     setAudiencePoll(null);
     setShowCall(false);
+    setShowCongrats(false); // Reset congrats on new question
   }, [data, questionNumber]);
 
   useEffect(() => {
@@ -40,14 +44,14 @@ const Quiz = ({
 
     // 50:50
     if (lifelines.use === "fiftyFifty") {
-      const correct = question.answers.find((a) => a.correct);
+      const correctAns = question.answers.find((a) => a.correct);
       const wrongs = question.answers.filter((a) => !a.correct);
       const randomWrong = wrongs[Math.floor(Math.random() * wrongs.length)];
-      setVisibleAnswers([correct, randomWrong]);
+      setVisibleAnswers([correctAns, randomWrong]);
       setLifelines((prev) => ({ ...prev, use: null }));
     }
 
-    // Flip
+    // Flip Question
     if (lifelines.use === "flip") {
       setQuestionNumber((prev) => prev + 1);
       setLifelines((prev) => ({ ...prev, use: null }));
@@ -66,17 +70,13 @@ const Quiz = ({
     // Phone a Friend
     if (lifelines.use === "phone") {
       setShowCall(true);
-      setTimeout(() => {
-        setShowCall(false);
-      }, 2000); // shows popup for 2 sec
+      setTimeout(() => setShowCall(false), 2000);
       setLifelines((prev) => ({ ...prev, use: null }));
     }
   }, [lifelines.use, question, setLifelines, setQuestionNumber]);
 
   const delay = (duration, callBack) => {
-    setTimeout(() => {
-      callBack();
-    }, duration);
+    setTimeout(() => callBack(), duration);
   };
 
   const handleClick = (item) => {
@@ -90,15 +90,20 @@ const Quiz = ({
     delay(5000, () => {
       if (item.correct) {
         correctAnswer();
+
+        // If last question, play crore audio & show message
+        if (questionNumber === data.length) {
+          playCrore();
+          setShowCongrats(true);
+        }
+
         delay(1000, () => {
           setQuestionNumber((prev) => prev + 1);
           setSelectedAnswer(null);
         });
       } else {
         wrongAnswer();
-        delay(1000, () => {
-          setTimeOut(true);
-        });
+        delay(1000, () => setTimeOut(true));
       }
     });
   };
@@ -135,6 +140,13 @@ const Quiz = ({
       {showCall && (
         <div className="call-popup">
           📞 Calling your friend... <strong>Malkit</strong>
+        </div>
+      )}
+
+      {/* Congrats Message for Last Question */}
+      {showCongrats && (
+        <div className="congrats-popup">
+          🎉 Congratulations! You may get extra marks from sir! 🎉
         </div>
       )}
     </div>

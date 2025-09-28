@@ -5,17 +5,15 @@ const Timer = ({ setTimeOut, questionNumber }) => {
 
   useEffect(() => {
     if (timer === 0) return setTimeOut(true);
-    const interval = setInterval(() => {
-      setTimer((prev) => prev - 1);
-    }, 1000);
-
+    const interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
     return () => clearInterval(interval);
   }, [timer, setTimeOut]);
 
   useEffect(() => {
     setTimer(30);
   }, [questionNumber]);
-  return timer;
+
+  return <div className="timer">{timer}</div>;
 };
 
 export default Timer;

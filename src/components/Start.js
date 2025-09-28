@@ -8,23 +8,16 @@ const Start = ({ setName, setTimeOut }) => {
     setTimeOut(false);
     inputRef.current.value && setName(inputRef.current.value);
   };
+
   return (
-    <div
-      style={{
-        margin: "auto",
-        padding: "15px",
-        maxWidth: "400px",
-        alignContent: "center",
-        marginTop: "300px",
-      }}
-    >
+    <div className="start-container">
       <input
         type="text"
         placeholder="Enter Name"
         ref={inputRef}
         className="form-control"
       />
-      <MDBBtn style={{ width: "100%" }} className="mt-2" onClick={handleClick}>
+      <MDBBtn className="btn mt-2" onClick={handleClick}>
         Start Game
       </MDBBtn>
     </div>
