@@ -20,6 +20,9 @@ function App() {
     phone: true,
   });
 
+  // Track if intro audio has played
+  const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+
   useEffect(() => {
     questionNumber > 1 &&
       setEarned(
@@ -36,7 +39,26 @@ function App() {
           <MDBCol md="9">
             <div className="main">
               {timeOut ? (
-                <h1 className="earned">You Earned Total: {earned}</h1>
+                <div style={{ textAlign: "center", marginTop: "150px" }}>
+                  <h1 className="earned">You Earned Total: {earned}</h1>
+                  <MDBBtn
+                    color="warning"
+                    style={{ marginTop: "20px" }}
+                    onClick={() => {
+                      setQuestionNumber(1);
+                      setEarned("₹ 0");
+                      setTimeOut(false);
+                      setLifelines({
+                        fiftyFifty: true,
+                        flip: true,
+                        audience: true,
+                        phone: true,
+                      });
+                    }}
+                  >
+                    Try Again
+                  </MDBBtn>
+                </div>
               ) : (
                 <>
                   <div style={{ height: "50%", position: "relative" }}>
@@ -100,7 +122,7 @@ function App() {
                       }
                       className="mx-2"
                     >
-                      Calling 
+                      Calling
                     </MDBBtn>
                   </div>
 
@@ -112,6 +134,8 @@ function App() {
                       setTimeOut={setTimeOut}
                       lifelines={lifelines}
                       setLifelines={setLifelines}
+                      hasPlayedIntro={hasPlayedIntro}
+                      setHasPlayedIntro={setHasPlayedIntro}
                     />
                   </div>
                 </>
@@ -143,6 +167,7 @@ function App() {
                         audience: true,
                         phone: true,
                       });
+                      setHasPlayedIntro(false); // reset intro for next game
                     }}
                   >
                     Exit

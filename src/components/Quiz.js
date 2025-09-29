@@ -3,7 +3,8 @@ import useSound from "use-sound";
 import play from "../sounds/play.mp3";
 import correct from "../sounds/correct.mp3";
 import wrong from "../sounds/wrong.mp3";
-import croreAudio from "../sounds/crore.mp3"; // Audio for 7 crore win
+import croreAudio from "../sounds/crore.mp3";
+import introAudio from "../sounds/intro.mp3";
 
 const Quiz = ({
   data,
@@ -12,6 +13,8 @@ const Quiz = ({
   setTimeOut,
   lifelines,
   setLifelines,
+  hasPlayedIntro,
+  setHasPlayedIntro,
 }) => {
   const [question, setQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -19,30 +22,45 @@ const Quiz = ({
   const [visibleAnswers, setVisibleAnswers] = useState([]);
   const [audiencePoll, setAudiencePoll] = useState(null);
   const [showCall, setShowCall] = useState(false);
-  const [showCongrats, setShowCongrats] = useState(false); // <-- New state
+  const [showCongrats, setShowCongrats] = useState(false);
+  const [allowSelection, setAllowSelection] = useState(false);
 
-  const [letsPlay] = useSound(play);
-  const [correctAnswer] = useSound(correct);
-  const [wrongAnswer] = useSound(wrong);
-  const [playCrore] = useSound(croreAudio);
+  // Sounds
+  const [playIntro] = useSound(introAudio, {
+    onend: () => {
+      setAllowSelection(true);    // Enable selection after intro
+      setHasPlayedIntro(true);    // Mark intro as played
+      playQuestionAudio();        // Play normal question audio
+    },
+  });
+  const [playQuestionAudio] = useSound(play, { interrupt: true });
+  const [playCorrect] = useSound(correct);
+  const [playWrong] = useSound(wrong);
+  const [playCroreSound] = useSound(croreAudio);
 
+  // Load question and handle intro/audio
   useEffect(() => {
-    setQuestion(data[questionNumber - 1]);
-    setVisibleAnswers(data[questionNumber - 1]?.answers || []);
+    const currentQuestion = data[questionNumber - 1];
+    setQuestion(currentQuestion);
+    setVisibleAnswers(currentQuestion?.answers || []);
     setAudiencePoll(null);
     setShowCall(false);
-    setShowCongrats(false); // Reset congrats on new question
-  }, [data, questionNumber]);
+    setShowCongrats(false);
+    setSelectedAnswer(null);
 
+    if (!hasPlayedIntro) {
+      setAllowSelection(false); // Block selection during intro
+      playIntro();              // Play intro once
+    } else {
+      setAllowSelection(true);  // Allow selection immediately
+      playQuestionAudio();      // Play question audio but don't block selection
+    }
+  }, [questionNumber, data, hasPlayedIntro, playIntro, playQuestionAudio]);
+
+  // Lifelines
   useEffect(() => {
-    letsPlay();
-  }, [letsPlay]);
+    if (!question || !lifelines.use) return;
 
-  // Lifeline Handlers
-  useEffect(() => {
-    if (!question) return;
-
-    // 50:50
     if (lifelines.use === "fiftyFifty") {
       const correctAns = question.answers.find((a) => a.correct);
       const wrongs = question.answers.filter((a) => !a.correct);
@@ -51,13 +69,11 @@ const Quiz = ({
       setLifelines((prev) => ({ ...prev, use: null }));
     }
 
-    // Flip Question
     if (lifelines.use === "flip") {
       setQuestionNumber((prev) => prev + 1);
       setLifelines((prev) => ({ ...prev, use: null }));
     }
 
-    // Audience Poll
     if (lifelines.use === "audience") {
       const poll = question.answers.map((a) => ({
         text: a.text,
@@ -67,7 +83,6 @@ const Quiz = ({
       setLifelines((prev) => ({ ...prev, use: null }));
     }
 
-    // Phone a Friend
     if (lifelines.use === "phone") {
       setShowCall(true);
       setTimeout(() => setShowCall(false), 2000);
@@ -75,37 +90,40 @@ const Quiz = ({
     }
   }, [lifelines.use, question, setLifelines, setQuestionNumber]);
 
-  const delay = (duration, callBack) => {
-    setTimeout(() => callBack(), duration);
-  };
-
   const handleClick = (item) => {
+    if (!allowSelection || selectedAnswer) return;
+
+    // Immediately mark as selected
     setSelectedAnswer(item);
     setClassName("answer active");
 
-    delay(3000, () => {
+    // Show correct/wrong after short delay
+    setTimeout(() => {
       setClassName(item.correct ? "answer correct" : "answer wrong");
-    });
+    }, 300);
 
-    delay(5000, () => {
+    // Move to next question or Try Again
+    setTimeout(() => {
       if (item.correct) {
-        correctAnswer();
+        playCorrect();
 
-        // If last question, play crore audio & show message
         if (questionNumber === data.length) {
-          playCrore();
+          // Last question correct
+          playCroreSound();
           setShowCongrats(true);
-        }
-
-        delay(1000, () => {
+          setTimeOut(true); // End game and show final score
+        } else {
           setQuestionNumber((prev) => prev + 1);
           setSelectedAnswer(null);
-        });
+        }
       } else {
-        wrongAnswer();
-        delay(1000, () => setTimeOut(true));
+        playWrong();
+        // Wrong answer → Try Again from start
+        setQuestionNumber(1);
+        setSelectedAnswer(null);
+        setTimeOut(true);
       }
-    });
+    }, 1500);
   };
 
   return (
@@ -117,14 +135,17 @@ const Quiz = ({
           <div
             key={item.text}
             className={selectedAnswer === item ? className : "answer"}
-            onClick={() => !selectedAnswer && handleClick(item)}
+            onClick={() => handleClick(item)}
+            style={{
+              pointerEvents: allowSelection ? "auto" : "none",
+              opacity: allowSelection ? 1 : 0.5,
+            }}
           >
             {item.text}
           </div>
         ))}
       </div>
 
-      {/* Audience Poll Results */}
       {audiencePoll && (
         <div className="poll">
           <h4>Audience Poll</h4>
@@ -136,14 +157,12 @@ const Quiz = ({
         </div>
       )}
 
-      {/* Call a Friend Popup */}
       {showCall && (
         <div className="call-popup">
-          📞 Calling your friend... <strong>Malkit</strong>
+          📞 Calling <strong>Malkit</strong>
         </div>
       )}
 
-      {/* Congrats Message for Last Question */}
       {showCongrats && (
         <div className="congrats-popup">
           🎉 Congratulations! You may get extra marks from sir! 🎉
